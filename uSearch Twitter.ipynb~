@@ -510,8 +510,12 @@
    "cell_type": "code",
    "execution_count": 49,
    "metadata": {
+<<<<<<< HEAD
     "collapsed": false,
     "scrolled": true
+=======
+    "collapsed": true
+>>>>>>> 3388f78e4d1929ee5a6af38e08df0723f28e7c34
    },
    "outputs": [
     {
