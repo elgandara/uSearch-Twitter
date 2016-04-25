@@ -114,7 +114,40 @@ def get_results_tfidf(qry, idx, n):
 #print_results(results, 10)
 
 
-def get_results_bm25(qry, corpus, k1=1.5, b=0.75):
+def get_results_bm25(qry, corpus, k1=2.5, b=0.25):
+    idx = create_inverted_index(corpus)
+    
+    # n - the length of the corpus
+    n = len(corpus)
+    
+    # d - list with elements corresponding to the length of each document
+    d = [len(x.split()) for x in corpus]
+    
+    # d_avg - the average document length of the docuemnts in the corpus
+    d_avg = float(sum(d) / len(d))
+    score = collections.Counter()
+    for term in qry.split():
+        if term in idx:
+            i = idf(term, idx, n)
+            for doc in idx[term]:
+                # f - the number of times the term appears in the document
+                f = float(idx[term][doc])
+                # s - the BM25 score for this (term, docuemnt) pair
+                s = i * ( (f * (k1 + 1) ) / (f + k1 * (1 - b + (b * (float(d[doc] ) / d_avg) ) ) ) )
+                score[doc] += s
+                
+    results = []
+    for x in [ [r[0], r[1], tweet_user[r[0]] ] for r in zip(score.keys(), score.values() )]:
+        if x[1] > 0:
+            results.append([ x[1], x[0], x[2]])
+            
+    sorted_results  = sorted(results, key=lambda t: t[0] * -1)
+    return sorted_results
+
+#results = get_results_bm25('hate', tweet_text, k1=1.5, b=0.75)
+#print_results(results, 25)
+
+def get_results_bm25_version1(qry, corpus, k1=2.5, b=0.0):
     idx = create_inverted_index(corpus)
     
     # n - the length of the corpus
@@ -144,7 +177,73 @@ def get_results_bm25(qry, corpus, k1=1.5, b=0.75):
     sorted_results = sorted(results, key=lambda t: t[0] * -1)
     return sorted_results
 
-results = get_results_bm25('hate', tweet_text, k1=1.5, b=0.75)
+#results = get_results_bm25_version2('hate', tweet_text, k1=1.5, b=0.75)
+#print_results(results, 25)
+
+def get_results_bm25_version2(qry, corpus, k1=2.5, b=0.25):
+    idx = create_inverted_index(corpus)
+    
+    # n - the length of the corpus
+    n = len(corpus)
+    
+    # d - list with elements corresponding to the length of each document
+    d = [len(x.split()) for x in corpus]
+    
+    # d_avg - the average document length of the docuemnts in the corpus
+    d_avg = float(sum(d) / len(d))
+    score = collections.Counter()
+    for term in qry.split():
+        if term in idx:
+            i = idf(term, idx, n)
+            for doc in idx[term]:
+                # f - the number of times the term appears in the document
+                f = float(idx[term][doc])
+                # s - the BM25 score for this (term, docuemnt) pair
+                s = i * ( (f * (k1 + 1) ) / (f + k1 * (1 - b + (b * (float(d[doc] ) / d_avg) ) ) ) )
+                score[doc] += s
+                
+    results = []
+    for x in [ [r[0], r[1], tweet_user[r[0]] ] for r in zip(score.keys(), score.values() )]:
+        if x[1] > 0:
+            results.append([ x[1], x[0], x[2]])
+            
+    sorted_results = sorted(results, key=lambda t: t[0] * -1)
+    return sorted_results
+
+#results = get_results_bm25('hate', tweet_text, k1=1.5, b=0.75)
+#print_results(results, 25)
+
+def get_results_bm25_version3(qry, corpus, k1=2.5, b=0.75):
+    idx = create_inverted_index(corpus)
+    
+    # n - the length of the corpus
+    n = len(corpus)
+    
+    # d - list with elements corresponding to the length of each document
+    d = [len(x.split()) for x in corpus]
+    
+    # d_avg - the average document length of the docuemnts in the corpus
+    d_avg = float(sum(d) / len(d))
+    score = collections.Counter()
+    for term in qry.split():
+        if term in idx:
+            i = idf(term, idx, n)
+            for doc in idx[term]:
+                # f - the number of times the term appears in the document
+                f = float(idx[term][doc])
+                # s - the BM25 score for this (term, docuemnt) pair
+                s = i * ( (f * (k1 + 1) ) / (f + k1 * (1 - b + (b * (float(d[doc] ) / d_avg) ) ) ) )
+                score[doc] += s
+                
+    results = []
+    for x in [ [r[0], r[1], tweet_user[r[0]] ] for r in zip(score.keys(), score.values() )]:
+        if x[1] > 0:
+            results.append([ x[1], x[0], x[2]])
+            
+    sorted_results = sorted(results, key=lambda t: t[0] * -1)
+    return sorted_results
+
+#results = get_results_bm25('hate', tweet_text, k1=1.5, b=0.75)
 #print_results(results, 25)
 
 
@@ -171,8 +270,19 @@ def determine_query(query):
 def u_search(user_choice, query):
     if(user_choice == '1'):
 	query = normalize(query)
-        results = get_results_bm25(query, tweet_text)
+
+	print ("============== RESULTS - VERSION 1 ==============")
+        results = get_results_bm25_version1(query, tweet_text)
         print_results(results,25)
+
+        print ("============== RESULTS - VERSION 2 ==============")
+	results = get_results_bm25_version2(query, tweet_text)
+        print_results(results,25)
+
+	print ("============== RESULTS - VERSION 3 ==============")
+	results = get_results_bm25_version3(query, tweet_text)
+        print_results(results,25)
+
     if(user_choice == '2'):
 	query = query[1:]
         results = create_user_index(tweet_user)
