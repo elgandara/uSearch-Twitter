@@ -3,6 +3,13 @@ import csv
 import math
 import collections
 
+def getTwitterDocs(filename):
+	with open(filename, 'rb') as csvfile:
+		r = csv.reader(csvfile, delimiter=',', quotechar='"')
+		docs = [ (x[2], x[4], x[5])  for x in r]
+
+	return docs
+
 def erase_link(tweet):
     inx = tweet.find('http')
     #Check to see if tweet contains a link
@@ -24,23 +31,9 @@ def normalize(tweet):
     normalizedTweet = re.compile('[^a-zA-Z@]').sub(' ', normalizedTweet)
     normalizedTweet = normalizedTweet.lower()
     normalizedTweet = " ".join(normalizedTweet.split())
+
     return normalizedTweet
-with open("twitter-data/testdata.manual.2009.06.14.csv", 'rb') as csvfile:
-    r = csv.reader(csvfile, delimiter=',', quotechar='"')
-    docs = [ (x[2], x[4], x[5])  for x in r]
-    
-tweet_date = [ d[0] for d in docs ] #Tweet dates
-tweet_user = [ d[1] for d in docs ] #Tweet users
-tweet_text = [ d[2] for d in docs ] #Tweet text
 
-#Normalize each tweet 
-tweet_text = map(normalize, tweet_text)
-
-def create_corpus():
-    corpus = {}
-    for x in range(0,len(tweet_text)):
-        corpus[x] = [tweet_date[x], tweet_user[x],tweet_text[x]]
-        #print corpus[x]
 def create_inverted_index(corpus):
     idx = {}
     
@@ -59,7 +52,6 @@ def create_inverted_index(corpus):
                 idx[word] = {i:1}
     
     return idx
-idx = create_inverted_index(tweet_text)
 
 def create_user_index(users):
     
@@ -75,8 +67,6 @@ def create_user_index(users):
             user_tweets[users[i] ] = [i]
             
     return user_tweets
-
-user_tweet_index = create_user_index(tweet_user)
 
 def print_results(results, n, head=True):
     ''' Helper function to print results
@@ -106,25 +96,9 @@ def get_results_tfidf(qry, idx, n):
             results.append([x[1],x[0]])
     sorted_results= sorted(results, key=lambda t : t[0] * -1)
     return sorted_results
-#results = get_results_tfidf('monkeys', idx, len(tweet_user))
-#results = get_results_tfidf('hate', idx, len(tweet_user))
-#results = get_results_tfidf('sleep', idx, len(tweet_user))
-#results = get_results_tfidf('hate', idx, len(tweet_user))
 
-#print_results(results, 10)
+def get_results_bm25(idx, qry, k1=2.5, b=0.25):
 
-
-def get_results_bm25(qry, corpus, k1=2.5, b=0.25):
-    idx = create_inverted_index(corpus)
-    
-    # n - the length of the corpus
-    n = len(corpus)
-    
-    # d - list with elements corresponding to the length of each document
-    d = [len(x.split()) for x in corpus]
-    
-    # d_avg - the average document length of the docuemnts in the corpus
-    d_avg = float(sum(d) / len(d))
     score = collections.Counter()
     for term in qry.split():
         if term in idx:
@@ -144,154 +118,85 @@ def get_results_bm25(qry, corpus, k1=2.5, b=0.25):
     sorted_results  = sorted(results, key=lambda t: t[0] * -1)
     return sorted_results
 
-#results = get_results_bm25('hate', tweet_text, k1=1.5, b=0.75)
-#print_results(results, 25)
-
-def get_results_bm25_version1(qry, corpus, k1=2.5, b=0.0):
-    idx = create_inverted_index(corpus)
-    
-    # n - the length of the corpus
-    n = len(corpus)
-    
-    # d - list with elements corresponding to the length of each document
-    d = [len(x.split()) for x in corpus]
-    
-    # d_avg - the average document length of the docuemnts in the corpus
-    d_avg = float(sum(d) / len(d))
-    score = collections.Counter()
-    for term in qry.split():
-        if term in idx:
-            i = idf(term, idx, n)
-            for doc in idx[term]:
-                # f - the number of times the term appears in the document
-                f = float(idx[term][doc])
-                # s - the BM25 score for this (term, docuemnt) pair
-                s = i * ( (f * (k1 + 1) ) / (f + k1 * (1 - b + (b * (float(d[doc] ) / d_avg) ) ) ) )
-                score[doc] += s
-                
-    results = []
-    for x in [ [r[0], r[1], tweet_user[r[0]] ] for r in zip(score.keys(), score.values() )]:
-        if x[1] > 0:
-            results.append([ x[1], x[0], x[2]])
-            
-    sorted_results = sorted(results, key=lambda t: t[0] * -1)
-    return sorted_results
-
-#results = get_results_bm25_version2('hate', tweet_text, k1=1.5, b=0.75)
-#print_results(results, 25)
-
-def get_results_bm25_version2(qry, corpus, k1=2.5, b=0.25):
-    idx = create_inverted_index(corpus)
-    
-    # n - the length of the corpus
-    n = len(corpus)
-    
-    # d - list with elements corresponding to the length of each document
-    d = [len(x.split()) for x in corpus]
-    
-    # d_avg - the average document length of the docuemnts in the corpus
-    d_avg = float(sum(d) / len(d))
-    score = collections.Counter()
-    for term in qry.split():
-        if term in idx:
-            i = idf(term, idx, n)
-            for doc in idx[term]:
-                # f - the number of times the term appears in the document
-                f = float(idx[term][doc])
-                # s - the BM25 score for this (term, docuemnt) pair
-                s = i * ( (f * (k1 + 1) ) / (f + k1 * (1 - b + (b * (float(d[doc] ) / d_avg) ) ) ) )
-                score[doc] += s
-                
-    results = []
-    for x in [ [r[0], r[1], tweet_user[r[0]] ] for r in zip(score.keys(), score.values() )]:
-        if x[1] > 0:
-            results.append([ x[1], x[0], x[2]])
-            
-    sorted_results = sorted(results, key=lambda t: t[0] * -1)
-    return sorted_results
-
-#results = get_results_bm25('hate', tweet_text, k1=1.5, b=0.75)
-#print_results(results, 25)
-
-def get_results_bm25_version3(qry, corpus, k1=2.5, b=0.75):
-    idx = create_inverted_index(corpus)
-    
-    # n - the length of the corpus
-    n = len(corpus)
-    
-    # d - list with elements corresponding to the length of each document
-    d = [len(x.split()) for x in corpus]
-    
-    # d_avg - the average document length of the docuemnts in the corpus
-    d_avg = float(sum(d) / len(d))
-    score = collections.Counter()
-    for term in qry.split():
-        if term in idx:
-            i = idf(term, idx, n)
-            for doc in idx[term]:
-                # f - the number of times the term appears in the document
-                f = float(idx[term][doc])
-                # s - the BM25 score for this (term, docuemnt) pair
-                s = i * ( (f * (k1 + 1) ) / (f + k1 * (1 - b + (b * (float(d[doc] ) / d_avg) ) ) ) )
-                score[doc] += s
-                
-    results = []
-    for x in [ [r[0], r[1], tweet_user[r[0]] ] for r in zip(score.keys(), score.values() )]:
-        if x[1] > 0:
-            results.append([ x[1], x[0], x[2]])
-            
-    sorted_results = sorted(results, key=lambda t: t[0] * -1)
-    return sorted_results
-
-#results = get_results_bm25('hate', tweet_text, k1=1.5, b=0.75)
-#print_results(results, 25)
-
-
 def print_results_username(username_index, user_name):
 	if(user_name in username_index):
-		# All of the documents that correspond to the username 
+	    	# All of the documents that correspond to the username 
 		docs = username_index[user_name]
         	# For every doc, print date, username, and tweet 
 		for doc in docs:
 			print('\t%s | %s | %s' % (tweet_date[doc], tweet_user[doc], tweet_text[doc]))
 	else:
         	print "Username does not exist"
-    
-#results = create_user_index(tweet_user)
-#print_results_username(results, 'SimpleManJess')
 
 def determine_query(query):
 	#print "(determine_query) " + query 
 	if(query[0] == '@' and len(query.split()) == 1):
-        	user_choice = raw_input("Select your query preference \n1. All content \n2. User content")
+        	user_choice = raw_input("Select your query preference\n  1. All content\n  2. User content\n")
 		return user_choice
 	return '1'
 
-def u_search(user_choice, query):
+def u_search(user_choice, query, idx, user_idx):
     if(user_choice == '1'):
-	query = normalize(query)
+		query = normalize(query)
 
-	print ("============== RESULTS - VERSION 1 ==============")
-        results = get_results_bm25_version1(query, tweet_text)
-        print_results(results,25)
+		print ("\n============== RESULTS - GROUP 1 ==============")
+		results = get_results_bm25(idx, query, 2.5, 0.0)
+		print_results(results,25)
 
-        print ("============== RESULTS - VERSION 2 ==============")
-	results = get_results_bm25_version2(query, tweet_text)
-        print_results(results,25)
+		print ("\n============== RESULTS - GROUP 2 ==============")
+		results = get_results_bm25(idx, query, 2.5, 0.25)
+		print_results(results,25)
 
-	print ("============== RESULTS - VERSION 3 ==============")
-	results = get_results_bm25_version3(query, tweet_text)
-        print_results(results,25)
+		print ("\n============== RESULTS - GROUP 3 ==============")
+		results = get_results_bm25(idx, query, 2.5, 0.75)
+		print_results(results,25)
 
     if(user_choice == '2'):
-	query = query[1:]
-        results = create_user_index(tweet_user)
-        print_results_username(results, query)
-def main():
-	query = raw_input("Enter Query: " )
-	return query
+		query = query[1:]
+		print_results_username(user_idx, query)
 
-query = main()
-choice = determine_query(query)
-u_search(choice,query)
+
+# The main function that will run the search engine
+def main():
+
+	query = ""
+	idx = create_inverted_index(tweet_text)
+	user_idx = create_user_index(tweet_user)
+
+	# Keep asking for a query until the user enters an "@" sign
+	while query != "@":
+		query = raw_input("Enter Query (@ to quit): " )
+		if (query != "@"):
+			choice = determine_query(query)
+			u_search(choice, query, idx, user_idx)
+
+		print ("")
+
+	#print ("")
+
+# Get the name of the file to use for data
+filename = raw_input("Enter data filename: ")
+
+# Read in the data from the csv file
+docs = getTwitterDocs(filename)
+
+# Create the lists that contain the tweet info
+tweet_date = [ d[0] for d in docs ] #Tweet dates
+tweet_user = [ d[1] for d in docs ] #Tweet users
+tweet_text = [ d[2] for d in docs ] #Tweet text
+
+#Normalize each tweet 
+tweet_text = map(normalize, tweet_text)
+
+# n - the length of the corpus
+n = len(tweet_text)
+
+# d - list with elements corresponding to the length of each document
+d = [len(x.split()) for x in tweet_text]
+
+# d_avg - the average document length of the docuemnts in the corpus
+d_avg = float(sum(d) / len(d))
+
+# Run the search engine
+main()
 
