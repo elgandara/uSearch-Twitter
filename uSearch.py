@@ -139,16 +139,7 @@ def u_search(user_choice, query, idx, user_idx):
     if(user_choice == '1'):
 		query = normalize(query)
 
-		print ("\n============== RESULTS - GROUP 1 ==============")
-		results = get_results_bm25(idx, query, 2.5, 0.0)
-		print_results(results,25)
-
-		print ("\n============== RESULTS - GROUP 2 ==============")
 		results = get_results_bm25(idx, query, 2.5, 0.25)
-		print_results(results,25)
-
-		print ("\n============== RESULTS - GROUP 3 ==============")
-		results = get_results_bm25(idx, query, 2.5, 0.75)
 		print_results(results,25)
 
     if(user_choice == '2'):
