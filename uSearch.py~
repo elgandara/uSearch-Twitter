@@ -166,10 +166,10 @@ def main():
 	#print ("")
 
 # Get the name of the file to use for data
-#filename = raw_input("Enter data filename: ")
+filename = raw_input("Enter data filename: ")
 
 # Read in the data from the csv file
-docs = getTwitterDocs("twitter-data/smallData.csv")
+docs = getTwitterDocs(filename)
 
 # Create the lists that contain the tweet info
 tweet_date = [ d[0] for d in docs ] #Tweet dates
